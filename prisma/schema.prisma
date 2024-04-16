@@ -8,16 +8,16 @@ datasource db {
 }
 
 model Event {
-  id          String          @id @default(cuid()) @db.VarChar()
+  id          String          @id @default(cuid())
   userId      String          @map("user_id")
-  name        String          @db.VarChar()
-  description String          @db.VarChar()
+  name        String
+  description String
   datetime    DateTime
-  type        String          @db.VarChar()
-  items       String[]        @db.VarChar()
+  type        String
+  items       String[]
   visibility  EventVisibility
-  location    String          @db.VarChar()
-  image       String?         @db.VarChar()
+  location    String
+  image       String?
   maxGuests   Int?            @map("max_guests")
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -27,15 +27,15 @@ model Event {
 }
 
 model Rsvp {
-  id                    String   @id @default(cuid()) @db.VarChar()
+  id                    String   @id @default(cuid())
   userId                String?  @map("user_id")
-  name                  String?  @db.VarChar()
-  email                 String   @db.VarChar()
-  eventId               String   @map("event_id") @db.VarChar()
+  name                  String?
+  email                 String
+  eventId               String   @map("event_id")
   congratulatoryMessage String?  @map("congratulatory_message") @db.Text
-  items                 String[] @db.VarChar()
-  uploads               String[] @db.VarChar()
-  guests                String[] @db.VarChar()
+  items                 String[]
+  uploads               String[]
+  guests                String[]
   attending             Boolean
 
   event Event @relation(fields: [eventId], references: [id])
