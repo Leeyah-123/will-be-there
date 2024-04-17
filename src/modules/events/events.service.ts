@@ -22,6 +22,7 @@ export default class EventsService {
     logger.info('Fetching events');
     return this.prisma.event.findMany({
       where: { visibility: EventVisibility.PUBLIC },
+      orderBy: { date: 'desc' },
     });
   }
 
@@ -177,7 +178,7 @@ export default class EventsService {
     await this.announceEventCancellation(updatedEvent);
 
     return {
-      message: 'Event updated successfully',
+      message: 'Event cancelled successfully',
       data: updatedEvent,
     };
   }
