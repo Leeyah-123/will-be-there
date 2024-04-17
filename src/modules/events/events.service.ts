@@ -200,7 +200,7 @@ export default class EventsService {
         .map((rsvp) => rsvp.email);
 
       await this.emailService.sendBulkEmail({
-        subject: event.name,
+        subject: 'Will Be There',
         recipients: emails,
         templateId: 3116,
         variables: {
@@ -230,7 +230,7 @@ export default class EventsService {
         .map((rsvp) => rsvp.email);
 
       await this.emailService.sendBulkEmail({
-        subject: event.name,
+        subject: 'Will Be There',
         recipients: emails,
         templateId: 8191,
         variables: {
@@ -252,7 +252,7 @@ export default class EventsService {
         .map((rsvp) => rsvp.email);
 
       await this.emailService.sendBulkEmail({
-        subject: event.name,
+        subject: 'Will Be There',
         recipients: emails,
         templateId: 8618,
         variables: {
