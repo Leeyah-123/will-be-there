@@ -4,8 +4,10 @@ export const errorHandler = (
   err: unknown,
   req: Request,
   res: Response,
-  _next: NextFunction
+  next: NextFunction
 ): Response => {
+  if (!err) next();
+
   if (err instanceof Error) {
     err.statusCode = (err as Error).statusCode || 500;
     err.message = err.message || 'Something went wrong';

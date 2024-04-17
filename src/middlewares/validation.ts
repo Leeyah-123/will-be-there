@@ -11,5 +11,8 @@ export const validateRequest =
         data: validationResponse.error.flatten().fieldErrors,
       });
     }
+
+    // This strips off any value provided in the request body that's not in the validation schema
+    req.body = validationResponse.data;
     next();
   };

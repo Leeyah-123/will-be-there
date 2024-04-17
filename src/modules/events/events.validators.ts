@@ -28,8 +28,6 @@ export const eventCreationValidationSchema = z.object({
   location: z.string(),
   locationReleaseDate: z.string().datetime().optional(),
   image: z.string().url({ message: 'Invalid image URL' }),
-  maxGuests: z
-    .number()
-    .min(1, { message: 'Max guests must be at least 1' })
-    .optional(),
+  maxGuestsPerAttendee: z.number().optional(),
+  maxGuests: z.number().optional(),
 });
