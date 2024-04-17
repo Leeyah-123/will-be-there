@@ -8,17 +8,20 @@ datasource db {
 }
 
 model Event {
-  id          String          @id @default(cuid())
-  userId      String          @map("user_id")
-  name        String
-  description String
-  datetime    DateTime
-  type        String
-  items       String[]
-  visibility  EventVisibility
-  location    String
-  image       String?
-  maxGuests   Int?            @map("max_guests")
+  id                  String          @id @default(cuid())
+  userId              String          @map("user_id")
+  name                String
+  description         String
+  date                DateTime
+  type                String
+  items               String[]
+  visibility          EventVisibility
+  location            String
+  locationReleaseDate DateTime?
+  image               String?
+  guestCount          Int             @default(0)
+  cancelled           Boolean         @default(false)
+  maxGuestPerAttendee Int?            @map("max_guest_per_attendee")
 
   createdAt DateTime @default(now()) @map("created_at")
   Rsvp      Rsvp[]
@@ -43,5 +46,5 @@ model Rsvp {
 
 enum EventVisibility {
   PUBLIC  @map("Public")
-  PRIVATE @map("private")
+  PRIVATE @map("Private")
 }

@@ -5,7 +5,7 @@ import express from 'express';
 import helmet from 'helmet';
 import pino from 'pino';
 
-import users from './modules/users';
+import events from './modules/events';
 
 import { errorHandler, logger } from './middlewares';
 
@@ -35,7 +35,7 @@ app.get('/ping', (_req, res, _next) => {
 });
 
 // Attach app routes
-app.use('/users', users);
+app.use('/events', events);
 
 // Catch 404 routes
 app.use((_req, res, _next) => {
