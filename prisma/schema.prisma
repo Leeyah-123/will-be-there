@@ -8,28 +8,32 @@ datasource db {
 }
 
 model Event {
-  id          String          @id @default(cuid())
-  userId      String          @map("user_id")
-  name        String
-  description String
-  datetime    DateTime
-  type        String
-  items       String[]
-  visibility  EventVisibility
-  location    String
-  image       String?
-  maxGuests   Int?            @map("max_guests")
+  id                   String          @id @default(uuid())
+  userId               String          @map("user_id")
+  name                 String
+  description          String
+  date                 DateTime
+  type                 String
+  items                String[]
+  visibility           EventVisibility
+  location             String
+  locationReleaseDate  DateTime?
+  image                String?
+  guestCount           Int             @default(0) @map("guest_count")
+  cancelled            Boolean         @default(false)
+  maxGuestsPerAttendee Int?            @map("max_guests_per_attendee")
+  maxGuests            Int?            @map("max_guests")
 
   createdAt DateTime @default(now()) @map("created_at")
-  Rsvp      Rsvp[]
+  rsvps     Rsvp[]
 
   @@map("events")
 }
 
 model Rsvp {
-  id                    String   @id @default(cuid())
+  id                    String   @id @default(uuid())
   userId                String?  @map("user_id")
-  name                  String?
+  name                  String
   email                 String
   eventId               String   @map("event_id")
   congratulatoryMessage String?  @map("congratulatory_message") @db.Text
@@ -39,9 +43,11 @@ model Rsvp {
   attending             Boolean
 
   event Event @relation(fields: [eventId], references: [id])
+
+  @@map("rsvps")
 }
 
 enum EventVisibility {
   PUBLIC  @map("Public")
-  PRIVATE @map("private")
+  PRIVATE @map("Private")
 }

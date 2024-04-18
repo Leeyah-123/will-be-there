@@ -5,7 +5,9 @@ import express from 'express';
 import helmet from 'helmet';
 import pino from 'pino';
 
-import users from './modules/users';
+import events from './modules/events';
+import upload from './modules/upload';
+import rsvp from './modules/rsvp';
 
 import { errorHandler, logger } from './middlewares';
 
@@ -35,7 +37,12 @@ app.get('/ping', (_req, res, _next) => {
 });
 
 // Attach app routes
-app.use('/users', users);
+app.use('/uploads', upload);
+app.use('/events', events);
+app.use('/rsvps', rsvp);
+
+// Error Boundary
+app.use(errorHandler);
 
 // Catch 404 routes
 app.use((_req, res, _next) => {
@@ -43,9 +50,6 @@ app.use((_req, res, _next) => {
     message: 'Route Not Found',
   });
 });
-
-// Error Boundary
-app.use(errorHandler);
 
 app.listen(PORT, async () => {
   rootLogger.info(`App listening on port ${PORT}`);

@@ -1,4 +1,5 @@
 import pino from 'pino';
+import { User } from '../utils/types';
 
 declare global {
   interface Error {
@@ -9,6 +10,7 @@ declare global {
 
   namespace Express {
     interface Request {
+      user: User;
       logger: pino.Logger;
       logError: (message: string, error?: unknown) => void;
     }
