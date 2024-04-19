@@ -1,6 +1,12 @@
 import { SeaMailerClient } from 'seamailer-nodejs';
 import seamailer from '../../lib/seamailer';
 
+interface EmailAttachment {
+  filename: string;
+  contentType: string;
+  base64Content: string;
+}
+
 export class EmailService {
   private readonly seamailer: SeaMailerClient;
 
@@ -14,12 +20,14 @@ export class EmailService {
     message,
     templateId,
     variables,
+    attachments,
   }: {
     subject: string;
     recipient: string;
     message?: string;
     templateId?: number;
     variables?: Record<string, string>;
+    attachments?: EmailAttachment[];
   }) {
     await this.seamailer.sendMail({
       from: {
@@ -31,6 +39,7 @@ export class EmailService {
       subject,
       templateId,
       variables,
+      attachments,
     });
   }
 
@@ -40,12 +49,14 @@ export class EmailService {
     message,
     templateId,
     variables,
+    attachments,
   }: {
     subject: string;
     recipients: string[];
     message?: string;
     templateId?: number;
     variables?: Record<string, string>;
+    attachments?: EmailAttachment[];
   }) {
     await this.seamailer.sendMail({
       from: {
@@ -57,6 +68,7 @@ export class EmailService {
       subject,
       templateId,
       variables,
+      attachments,
     });
   }
 }

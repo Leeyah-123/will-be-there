@@ -41,6 +41,7 @@ export default class RsvpService {
     dto: RespondToEventDto,
     user?: User
   ): Promise<ServiceResponse<Rsvp>> {
+    // Event related validations
     const event = await this.prisma.event.findUnique({
       where: { id: dto.eventId },
     });
@@ -186,13 +187,9 @@ export default class RsvpService {
       }
     }
 
-    // Either a logged in user is present or a first and last name should be present
+    // Either a logged in user or a first name, last name and email should be present
     if (!user && (!(dto.firstName && dto.lastName) || !dto.email))
       return 'Please provide required user details';
-
-    if (!dto.attending && (dto.guests.length > 0 || dto.items.length > 0)) {
-      return 'Cannot specify guests or items if not attending';
-    }
 
     // Validate guest count if user specified guests
     if (dto.guests.length > 0) {

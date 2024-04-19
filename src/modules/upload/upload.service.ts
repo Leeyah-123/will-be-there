@@ -33,7 +33,7 @@ export default class UploadService {
 
     // delete image after upload
     await unlink(image.path).catch((err) => {
-      console.log('Unable to delete image after upload', err);
+      console.error('Unable to delete image after upload', err);
     });
 
     return {
