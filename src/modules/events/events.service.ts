@@ -82,35 +82,10 @@ export default class EventsService {
     userId: string,
     dto: EventCreationDto
   ): Promise<ServiceResponse<Event>> {
-    if (new Date(dto.date).getTime() <= new Date().getTime()) {
-      return {
-        status: StatusCodes.BAD_REQUEST,
-        message: 'Event date must be in the future',
-      };
-    }
-    if (dto.locationReleaseDate) {
-      if (new Date(dto.date) < new Date(dto.locationReleaseDate)) {
-        return {
-          status: StatusCodes.BAD_REQUEST,
-          message: 'Location release date must be before event date',
-        };
-      }
-      if (new Date(dto.locationReleaseDate).getTime() <= new Date().getTime()) {
-        return {
-          status: StatusCodes.BAD_REQUEST,
-          message: 'Location release date must be in the future',
-        };
-      }
-    }
-
     logger.info('Creating event');
     const event = await this.prisma.event.create({
       data: {
         ...dto,
-        date: new Date(dto.date),
-        locationReleaseDate: dto.locationReleaseDate
-          ? new Date(dto.locationReleaseDate)
-          : null,
         userId,
       },
     });
@@ -123,14 +98,31 @@ export default class EventsService {
       await this.releaseLocation(event.id);
     }
 
-    // Schedule a job one week before event date to remind attendees
-    const reminderDate = new Date(
-      event.date.getTime() - 7 * 24 * 60 * 60 * 1000
-    );
-    reminderDate.setDate(reminderDate.getDate() - 7);
-    schedule.scheduleJob(reminderDate, () => {
-      this.sendReminders(event.id);
-    });
+    /*
+      If event is happening in greater than a week time, schedule a job one week before event date to remind attendees. 
+      If event is happening in less than a week time, schedule a reminder for a day before the event. 
+      If event is happening in less than a day, do not schedule reminder.
+    */
+    const diff = event.date.getTime() - new Date().getTime();
+
+    const ONE_WEEK_IN_MILLISECONDS = 7 * 24 * 60 * 60 * 1000;
+    const ONE_DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
+
+    if (diff > ONE_WEEK_IN_MILLISECONDS) {
+      const reminderDate = new Date(
+        event.date.getTime() - ONE_WEEK_IN_MILLISECONDS
+      );
+      schedule.scheduleJob(reminderDate, () => {
+        this.sendReminders(event.id);
+      });
+    } else if (diff > ONE_DAY_IN_MILLISECONDS) {
+      const reminderDate = new Date(
+        event.date.getTime() - ONE_DAY_IN_MILLISECONDS
+      );
+      schedule.scheduleJob(reminderDate, () => {
+        this.sendReminders(event.id);
+      });
+    }
 
     return {
       message: 'Event created successfully',
@@ -199,6 +191,8 @@ export default class EventsService {
         .filter((rsvp) => rsvp.attending)
         .map((rsvp) => rsvp.email);
 
+      if (emails.length === 0) return;
+
       await this.emailService.sendBulkEmail({
         subject: 'Will Be There',
         recipients: emails,
@@ -228,6 +222,8 @@ export default class EventsService {
       const emails = event.rsvps
         .filter((rsvp) => rsvp.attending)
         .map((rsvp) => rsvp.email);
+
+      if (emails.length === 0) return;
 
       await this.emailService.sendBulkEmail({
         subject: 'Will Be There',

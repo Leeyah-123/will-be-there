@@ -13,11 +13,12 @@ model Event {
   name                 String
   description          String
   date                 DateTime
+  duration             Json?
   type                 String
   items                String[]
   visibility           EventVisibility
   location             String
-  locationReleaseDate  DateTime?
+  locationReleaseDate  DateTime
   image                String?
   guestCount           Int             @default(0) @map("guest_count")
   cancelled            Boolean         @default(false)

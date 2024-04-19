@@ -32,11 +32,13 @@ export const authMiddleware = async (
     console.error(err);
 
     if (err instanceof AxiosError) {
-      if (err.statusCode === 401) {
+      if (err.response?.status === 401) {
         return res
           .status(StatusCodes.UNAUTHORIZED)
           .json({ message: 'Invalid or expired token provided' });
       }
-    } else return res.status(500).json({ message: 'Something went wrong' });
+    }
+
+    return res.status(500).json({ message: 'Something went wrong' });
   }
 };
