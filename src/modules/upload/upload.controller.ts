@@ -11,6 +11,7 @@ export default class UploadController {
 
     this.uploadImage = this.uploadImage.bind(this);
     this.uploadImages = this.uploadImages.bind(this);
+    this.deleteImage = this.deleteImage.bind(this);
   }
 
   async uploadImage(req: Request, res: Response, next: NextFunction) {

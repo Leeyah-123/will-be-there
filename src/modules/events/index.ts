@@ -17,6 +17,12 @@ router.post(
   validateRequest(eventCreationValidationSchema),
   Controller.createEvent
 );
+router.patch(
+  '/:id',
+  authMiddleware,
+  validateRequest(eventCreationValidationSchema),
+  Controller.updateEvent
+);
 router.patch('/cancel/:id', authMiddleware, Controller.cancelEvent);
 
 export default router;

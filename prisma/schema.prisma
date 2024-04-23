@@ -18,7 +18,7 @@ model Event {
   items                String[]
   visibility           EventVisibility
   location             String
-  locationReleaseDate  DateTime
+  locationReleaseDate  DateTime?
   image                String?
   guestCount           Int             @default(0) @map("guest_count")
   cancelled            Boolean         @default(false)

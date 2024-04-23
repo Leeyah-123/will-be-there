@@ -5,7 +5,7 @@ import pino from 'pino';
 import { ServiceResponse } from '../../core/types';
 import { EmailService } from '../email/email.service';
 import UsersService from '../users/users.service';
-import { EventCreationDto } from './events.validators';
+import { EventCreationDto, UpdateEventDto } from './events.validators';
 
 export default class EventsService {
   private readonly prisma: PrismaClient;
@@ -90,42 +90,83 @@ export default class EventsService {
       },
     });
 
+    // Schedule a cron job to send an email containing the event location on its release date
     if (event.locationReleaseDate) {
       schedule.scheduleJob(event.locationReleaseDate, async () => {
         await this.releaseLocation(event.id);
       });
-    } else {
-      await this.releaseLocation(event.id);
     }
 
-    /*
-      If event is happening in greater than a week time, schedule a job one week before event date to remind attendees. 
-      If event is happening in less than a week time, schedule a reminder for a day before the event. 
-      If event is happening in less than a day, do not schedule reminder.
-    */
-    const diff = event.date.getTime() - new Date().getTime();
-
-    const ONE_WEEK_IN_MILLISECONDS = 7 * 24 * 60 * 60 * 1000;
-    const ONE_DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
-
-    if (diff > ONE_WEEK_IN_MILLISECONDS) {
-      const reminderDate = new Date(
-        event.date.getTime() - ONE_WEEK_IN_MILLISECONDS
-      );
-      schedule.scheduleJob(reminderDate, () => {
-        this.sendReminders(event.id);
-      });
-    } else if (diff > ONE_DAY_IN_MILLISECONDS) {
-      const reminderDate = new Date(
-        event.date.getTime() - ONE_DAY_IN_MILLISECONDS
-      );
-      schedule.scheduleJob(reminderDate, () => {
-        this.sendReminders(event.id);
-      });
-    }
+    await this.scheduleReminders(event.id, event.date);
 
     return {
       message: 'Event created successfully',
+      data: event,
+    };
+  }
+
+  async updateEvent(
+    logger: pino.Logger,
+    userId: string,
+    eventId: string,
+    dto: UpdateEventDto
+  ): Promise<ServiceResponse<Event>> {
+    let event = await this.prisma.event.findUnique({ where: { id: eventId } });
+    if (!event) {
+      return {
+        status: StatusCodes.NOT_FOUND,
+        message: 'Event not found',
+      };
+    }
+    if (event?.userId !== userId) {
+      return {
+        status: StatusCodes.UNAUTHORIZED,
+        message: 'You are not authorized to update this event',
+      };
+    }
+    if (event.cancelled) {
+      return {
+        status: StatusCodes.BAD_REQUEST,
+        message: 'Cannot update a cancelled event',
+      };
+    }
+
+    let previousName = dto.name === event.name ? undefined : event.name;
+
+    event = await this.prisma.event.update({
+      where: { id: eventId },
+      data: dto,
+    });
+
+    // Check for values that users who responded should be updated on
+    if (
+      dto.name ||
+      dto.description ||
+      dto.location ||
+      dto.date ||
+      dto.duration
+    ) {
+      let updatedDetails = `
+      ${previousName ? `Name: ${dto.name}\n` : ''}
+      ${dto.description ? `Description: ${dto.description}\n` : ''}
+      ${
+        dto.location &&
+        (!event.locationReleaseDate || event.locationReleaseDate < new Date())
+          ? `Location: ${dto.location}\n`
+          : ''
+      }
+      ${dto.date ? `Date: ${dto.date.toDateString()}\n` : ''}
+      `;
+
+      await this.releaseUpdatedEventDetails(
+        eventId,
+        updatedDetails,
+        previousName
+      );
+    }
+
+    return {
+      message: 'Event updated successfully',
       data: event,
     };
   }
@@ -173,6 +214,65 @@ export default class EventsService {
       message: 'Event cancelled successfully',
       data: updatedEvent,
     };
+  }
+
+  private async scheduleReminders(eventId: string, eventDate: Date) {
+    /*
+      If event is happening in greater than a week time, schedule a reminder one week before event date to remind attendees. 
+      If event is happening in less than a week time, schedule a reminder for a day before the event. 
+      If event is happening in less than a day, do not schedule reminder.
+    */
+    const diff = eventDate.getTime() - new Date().getTime();
+
+    const ONE_WEEK_IN_MILLISECONDS = 7 * 24 * 60 * 60 * 1000;
+    const ONE_DAY_IN_MILLISECONDS = 24 * 60 * 60 * 1000;
+
+    if (diff > ONE_WEEK_IN_MILLISECONDS) {
+      const reminderDate = new Date(
+        eventDate.getTime() - ONE_WEEK_IN_MILLISECONDS
+      );
+      schedule.scheduleJob(reminderDate, () => {
+        this.sendReminders(eventId);
+      });
+    } else if (diff > ONE_DAY_IN_MILLISECONDS) {
+      const reminderDate = new Date(
+        eventDate.getTime() - ONE_DAY_IN_MILLISECONDS
+      );
+      schedule.scheduleJob(reminderDate, () => {
+        this.sendReminders(eventId);
+      });
+    }
+  }
+
+  private async releaseUpdatedEventDetails(
+    eventId: string,
+    updatedDetails: string,
+    previousName: string
+  ) {
+    try {
+      const rsvps = await this.prisma.rsvp.findMany({
+        where: { eventId },
+      });
+
+      // Create an array of all emails of attending guests in RSVP
+      const emails = rsvps
+        .filter((rsvp) => rsvp.attending)
+        .map((rsvp) => rsvp.email);
+
+      if (emails.length === 0) return;
+
+      await this.emailService.sendBulkEmail({
+        subject: 'Will Be There',
+        recipients: emails,
+        templateId: 2364,
+        variables: {
+          name: previousName,
+          updatedDetails,
+        },
+      });
+    } catch (error) {
+      console.error(error);
+    }
   }
 
   private async sendReminders(eventId: string) {

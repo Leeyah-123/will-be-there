@@ -14,6 +14,7 @@ export default class EventsController {
     this.getGuestListForEvent = this.getGuestListForEvent.bind(this);
     this.getEventsByUser = this.getEventsByUser.bind(this);
     this.createEvent = this.createEvent.bind(this);
+    this.updateEvent = this.updateEvent.bind(this);
     this.cancelEvent = this.cancelEvent.bind(this);
   }
 
@@ -93,6 +94,33 @@ export default class EventsController {
       const response = await this.eventsService.createEvent(
         req.logger,
         req.user.id,
+        dto
+      );
+      return res.status(response.status || StatusCodes.OK).json({
+        message: response.message,
+        data: response.data,
+      });
+    } catch (err) {
+      req.logError((err as Error).message, err);
+      next(err);
+    }
+  }
+
+  async updateEvent(req: Request, res: Response, next: NextFunction) {
+    try {
+      const id = req.params.id;
+      if (!id || !z.string().uuid().safeParse(id).success) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: 'Invalid ID',
+        });
+      }
+
+      const dto = req.body;
+
+      const response = await this.eventsService.updateEvent(
+        req.logger,
+        req.user.id,
+        id,
         dto
       );
       return res.status(response.status || StatusCodes.OK).json({

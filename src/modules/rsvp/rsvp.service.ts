@@ -3,13 +3,16 @@ import { StatusCodes } from 'http-status-codes';
 import pino from 'pino';
 import { ServiceResponse } from '../../core/types';
 import { User } from '../../utils/types';
+import { EmailService } from '../email/email.service';
 import { RespondToEventDto, UploadEventImagesDto } from './rsvp.validators';
 
 export default class RsvpService {
   private readonly prisma: PrismaClient;
+  private readonly emailService: EmailService;
 
   constructor() {
     this.prisma = new PrismaClient();
+    this.emailService = new EmailService();
   }
 
   async getRsvpById(logger: pino.Logger, id: string): Promise<Rsvp | null> {
@@ -98,6 +101,19 @@ export default class RsvpService {
           guestCount: event.guestCount + rsvp.guests.length + 1,
         },
       });
+
+      // Send location to user immediately if no release date was specified
+      if (!event.locationReleaseDate)
+        await this.emailService.sendEmail({
+          subject: 'Will Be There',
+          recipient: rsvp.email,
+          templateId: 8191,
+          variables: {
+            name: event.name,
+            date: event.date.toDateString(),
+            location: event.location,
+          },
+        });
     }
 
     return {
@@ -195,7 +211,8 @@ export default class RsvpService {
     if (dto.guests.length > 0) {
       // Make sure no attendee brings more guests than is allowed
       if (
-        event.maxGuestsPerAttendee &&
+        event.maxGuestsPerAttendee !== null &&
+        event.maxGuestsPerAttendee !== undefined &&
         dto.guests.length > event.maxGuestsPerAttendee
       )
         return `Maximum number of guests allowed per attendee is ${event.maxGuestsPerAttendee}`;
