@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { StatusCodes } from 'http-status-codes';
+import { z } from 'zod';
 import UploadService from './upload.service';
 
 export default class UploadController {
@@ -31,6 +32,7 @@ export default class UploadController {
       next(err);
     }
   }
+
   async uploadImages(req: Request, res: Response, next: NextFunction) {
     try {
       const images = req.files as Express.Multer.File[];
@@ -48,6 +50,24 @@ export default class UploadController {
         message: response.message,
         data: response.data,
       });
+    } catch (err) {
+      req.logError((err as Error).message, err);
+      next(err);
+    }
+  }
+
+  async deleteImage(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { url } = req.params;
+      if (!url || !z.string().url().safeParse(url).success) {
+        return res.status(StatusCodes.BAD_REQUEST).json({
+          message: 'Invalid URL',
+        });
+      }
+
+      await this.uploadService.deleteImage(url);
+
+      return res.status(StatusCodes.NO_CONTENT);
     } catch (err) {
       req.logError((err as Error).message, err);
       next(err);

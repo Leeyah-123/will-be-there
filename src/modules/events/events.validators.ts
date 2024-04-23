@@ -21,6 +21,7 @@ export const eventCreationValidationSchema = z
     date: z.coerce.date(),
     duration: z
       .object({
+        days: z.number(),
         hours: z.number(),
         minutes: z.number(),
       })
@@ -40,32 +41,44 @@ export const eventCreationValidationSchema = z
   })
   .superRefine(({ date, locationReleaseDate, duration }, ctx) => {
     if (duration) {
-      if (duration.hours === 0 && duration.minutes === 0)
+      if (duration.days === 0 && duration.hours === 0 && duration.minutes === 0)
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           message: 'Duration must be greater than 0',
           path: ['duration'],
         });
-
-      if (new Date(date).getTime() <= new Date().getTime())
+      if (duration.hours > 24)
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: 'Event date must be in the future',
-          path: ['date'],
+          message: 'Hours in duration must be less than 24 hours',
+          path: ['duration'],
         });
-
-      if (new Date(date).getTime() < new Date(locationReleaseDate).getTime())
+      if (duration.minutes > 60)
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: 'Location release date must be before event date',
-          path: ['locationReleaseDate'],
-        });
-
-      if (new Date(locationReleaseDate).getTime() <= new Date().getTime())
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Location release date must be in the future',
-          path: ['locationReleaseDate'],
+          message: 'Minutes in duration must be less than 60 minutes',
+          path: ['duration'],
         });
     }
+
+    if (new Date(date).getTime() <= new Date().getTime())
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Event date must be in the future',
+        path: ['date'],
+      });
+
+    if (new Date(date).getTime() < new Date(locationReleaseDate).getTime())
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Location release date must be before event date',
+        path: ['locationReleaseDate'],
+      });
+
+    if (new Date(locationReleaseDate).getTime() <= new Date().getTime())
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Location release date must be in the future',
+        path: ['locationReleaseDate'],
+      });
   });
