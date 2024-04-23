@@ -131,7 +131,7 @@ export default class EventsService {
       };
     }
 
-    let previousName = dto.name === event.name ? undefined : event.name;
+    let previousName = event.name;
 
     event = await this.prisma.event.update({
       where: { id: eventId },
@@ -147,7 +147,7 @@ export default class EventsService {
       dto.duration
     ) {
       let updatedDetails = `
-      ${previousName ? `Name: ${dto.name}\n` : ''}
+      ${previousName !== dto.name ? `Name: ${dto.name}\n` : ''}
       ${dto.description ? `Description: ${dto.description}\n` : ''}
       ${
         dto.location &&
