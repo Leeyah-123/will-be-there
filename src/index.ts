@@ -6,8 +6,8 @@ import helmet from 'helmet';
 import pino from 'pino';
 
 import events from './modules/events';
-import upload from './modules/upload';
 import rsvp from './modules/rsvp';
+import upload from './modules/upload';
 
 import { errorHandler, logger } from './middlewares';
 
@@ -30,8 +30,8 @@ app.use(helmet());
 app.use(logger);
 
 // Used for health checks
-app.get('/ping', (_req, res, _next) => {
-  res.json({
+app.get('/ping', async (_req, res, _next) => {
+  return res.json({
     message: 'pong',
   });
 });
