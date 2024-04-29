@@ -318,12 +318,27 @@ export default class EventsService {
 
       if (!event || event.cancelled) return;
 
+      const user = await this.usersService.getUserById(event.userId);
+
       // Create an array of all emails of attending guests in RSVP
       const emails = event.rsvps
         .filter((rsvp) => rsvp.attending)
         .map((rsvp) => rsvp.email);
 
       if (emails.length === 0) return;
+
+      // TODO: Include add to calendar option in email
+      // const eventDetails = {
+      //   start: event.date,
+      //   duration: event.duration,
+      //   title: event.name,
+      //   description: event.description,
+      //   location: event.location,
+      //   busyStatus: 'FREE',
+      //   organizer: { name: user?.username, email: user?.email },
+      // };
+
+      // createEvent(event as EventDetails, (error, value))
 
       await this.emailService.sendBulkEmail({
         subject: 'Will Be There',

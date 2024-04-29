@@ -14,7 +14,7 @@ export default class RsvpController {
     this.getRsvpsForUser = this.getRsvpsForUser.bind(this);
     this.getRsvpsByEventId = this.getRsvpsByEventId.bind(this);
     this.respondToEvent = this.respondToEvent.bind(this);
-    this.updateRsvpStatus = this.updateRsvpStatus.bind(this);
+    this.updateRsvp = this.updateRsvp.bind(this);
     this.uploadEventImages = this.uploadEventImages.bind(this);
   }
 
@@ -129,21 +129,12 @@ export default class RsvpController {
     }
   }
 
-  async updateRsvpStatus(req: Request, res: Response, next: NextFunction) {
+  async updateRsvp(req: Request, res: Response, next: NextFunction) {
     try {
-      const eventId = req.params.eventId;
-      if (!eventId || !z.string().uuid().safeParse(eventId).success) {
-        return res.status(StatusCodes.BAD_REQUEST).json({
-          message: 'Invalid ID',
-        });
-      }
-
-      const attending = req.query.attending === 'true';
       const response = await this.rsvpService.updateRsvpStatus(
         req.logger,
         req.user.id,
-        eventId,
-        attending
+        req.body
       );
       return res.status(response.status || StatusCodes.OK).json({
         message: response.message,

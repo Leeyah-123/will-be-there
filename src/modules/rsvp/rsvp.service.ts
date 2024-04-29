@@ -4,7 +4,11 @@ import pino from 'pino';
 import { ServiceResponse } from '../../core/types';
 import { User } from '../../utils/types';
 import { EmailService } from '../email/email.service';
-import { RespondToEventDto, UploadEventImagesDto } from './rsvp.validators';
+import {
+  RespondToEventDto,
+  UpdateRsvpDto,
+  UploadEventImagesDto,
+} from './rsvp.validators';
 
 export default class RsvpService {
   private readonly prisma: PrismaClient;
@@ -125,30 +129,91 @@ export default class RsvpService {
   async updateRsvpStatus(
     logger: pino.Logger,
     userId: string,
-    eventId: string,
-    attending: boolean
+    dto: UpdateRsvpDto
   ): Promise<ServiceResponse<Rsvp>> {
     const rsvp = await this.prisma.rsvp.findFirst({
-      where: { userId, eventId },
+      where: { userId, eventId: dto.eventId },
+      include: { event: true },
     });
     if (!rsvp)
       return {
         message: 'Rsvp not found',
         status: StatusCodes.NOT_FOUND,
       };
-    if (rsvp.attending === attending)
+    if (dto.attending === rsvp.attending)
       return {
         message:
           'Rsvp status is already ' +
-          (attending ? 'attending' : 'not attending'),
+          (rsvp.attending ? 'attending' : 'not attending'),
         status: StatusCodes.BAD_REQUEST,
+      };
+
+    // Validate RSVP
+    const validationError = await this.validateRsvp(
+      rsvp.event,
+      dto,
+      undefined,
+      true,
+      rsvp.guests.length
+    );
+    if (validationError)
+      return {
+        status: StatusCodes.BAD_REQUEST,
+        message: validationError,
       };
 
     logger.info('Updating rsvp status');
     const updatedRsvp = await this.prisma.rsvp.update({
       where: { id: rsvp.id },
-      data: { attending },
+      data: {
+        attending: rsvp.attending,
+        guests: rsvp.guests,
+        congratulatoryMessage: dto.congratulatoryMessage,
+        items: dto.items,
+      },
     });
+
+    if (dto.attending) {
+      if (!rsvp.attending) {
+        // Update event guest count
+        await this.prisma.event.update({
+          where: { id: dto.eventId },
+          data: {
+            guestCount: rsvp.event.guestCount + rsvp.guests.length + 1,
+          },
+        });
+
+        // If user was previously not attending but will be attending now, send email containing event location
+        if (!rsvp.event.locationReleaseDate)
+          await this.emailService.sendEmail({
+            subject: 'Will Be There',
+            recipient: rsvp.email,
+            templateId: 8191,
+            variables: {
+              name: rsvp.event.name,
+              date: rsvp.event.date.toDateString(),
+              location: rsvp.event.location,
+            },
+          });
+      } else {
+        // Update event guest count
+        await this.prisma.event.update({
+          where: { id: dto.eventId },
+          data: {
+            guestCount:
+              rsvp.event.guestCount - rsvp.guests.length + dto.guests.length,
+          },
+        });
+      }
+    } else {
+      await this.prisma.event.update({
+        where: { id: dto.eventId },
+        data: {
+          guestCount: rsvp.event.guestCount - rsvp.guests.length - 1,
+        },
+      });
+    }
+
     return {
       message: 'Successfully updated rsvp status',
       data: updatedRsvp,
@@ -191,24 +256,30 @@ export default class RsvpService {
   private async validateRsvp(
     event: Event,
     dto: RespondToEventDto,
-    user?: User
+    user?: User,
+    update?: boolean,
+    previousGuestLength?: number
   ) {
-    if (user) {
-      // Ensure user hasn't already responded to event
-      const rsvp = await this.prisma.rsvp.findFirst({
-        where: { userId: user.id, eventId: dto.eventId },
-      });
-      if (rsvp) {
-        return 'You have already responded to this event';
+    if (!update) {
+      if (user) {
+        // Ensure user hasn't already responded to event
+        const rsvp = await this.prisma.rsvp.findFirst({
+          where: { userId: user.id, eventId: dto.eventId },
+        });
+        if (rsvp) {
+          return 'You have already responded to this event';
+        }
       }
-    }
 
-    // Either a logged in user or a first name, last name and email should be present
-    if (!user && (!(dto.firstName && dto.lastName) || !dto.email))
-      return 'Please provide required user details';
+      // Either a logged in user or a first name, last name and email should be present
+      if (!user && (!(dto.firstName && dto.lastName) || !dto.email))
+        return 'Please provide required user details';
+    }
 
     // Validate guest count if user specified guests
     if (dto.guests.length > 0) {
+      event.guestCount -= previousGuestLength || 0;
+
       // Make sure no attendee brings more guests than is allowed
       if (
         event.maxGuestsPerAttendee !== null &&

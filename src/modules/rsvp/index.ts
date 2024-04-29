@@ -24,6 +24,6 @@ router.post(
   validateRequest(uploadEventImagesSchema),
   Controller.uploadEventImages
 );
-router.patch('/:eventId', authMiddleware, Controller.updateRsvpStatus);
+router.patch('/', authMiddleware, Controller.updateRsvp);
 
 export default router;
