@@ -12,7 +12,7 @@ const Controller = new RsvpController();
 
 router.get('/', authMiddleware, Controller.getRsvpsForUser);
 router.get('/id/:id', authMiddleware, Controller.getRsvpById);
-router.get('/event/:id', authMiddleware, Controller.getRsvpsByEventId);
+router.get('/event/:id', Controller.getRsvpsByEventId);
 router.post(
   '/',
   validateRequest(respondToEventValidationSchema),
