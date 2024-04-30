@@ -140,13 +140,6 @@ export default class RsvpService {
         message: 'Rsvp not found',
         status: StatusCodes.NOT_FOUND,
       };
-    if (dto.attending === rsvp.attending)
-      return {
-        message:
-          'Rsvp status is already ' +
-          (rsvp.attending ? 'attending' : 'not attending'),
-        status: StatusCodes.BAD_REQUEST,
-      };
 
     // Validate RSVP
     const validationError = await this.validateRsvp(
